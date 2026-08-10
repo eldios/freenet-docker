@@ -1,0 +1,32 @@
+services:
+  freenet:
+    image: ghcr.io/eldios/freenet:latest
+    container_name: freenet
+    restart: unless-stopped
+
+    command:
+      - network
+      # Without this the node exits with code 42 when a release appears, and a
+      # restart policy brings it back on the same version to do it again.
+      # Upgrades happen by changing the image tag.
+      - --disable-auto-update
+      # A node takes what it is given unless told otherwise. Pick numbers that
+      # suit the line and the disk, these are only a starting point.
+      - --bandwidth-limit
+      - "1048576"
+      - --max-hosting-disk
+      - "10GB"
+
+    volumes:
+      # Holds the transport keypair, which is the node identity, and the
+      # contract state. Back it up.
+      - freenet-data:/data
+
+    ports:
+      # Peer-to-peer only. Port 7509 is the client API and must not be
+      # published: reaching it means reading and modifying keys and state.
+      - "31337:31337/udp"
+      - "31337:31337/tcp"
+
+volumes:
+  freenet-data:
