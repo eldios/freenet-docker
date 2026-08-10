@@ -1,4 +1,5 @@
 result
 result-*
+.run/
 .direnv/
 .envrc.local

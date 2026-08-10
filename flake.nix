@@ -16,6 +16,9 @@
     in {
       devShells.default = pkgs.mkShell {
         buildInputs = with pkgs; [
+          # Task runner: every routine command lives in the Justfile.
+          just
+
           # Every gate the CI workflow runs, so it can be reproduced locally.
           hadolint
           actionlint
@@ -30,10 +33,7 @@
         ];
 
         shellHook = ''
-          echo "freenet-docker dev shell"
-          echo "  hadolint Containerfile"
-          echo "  actionlint"
-          echo "  act -n"
+          echo "freenet-docker dev shell - run 'just' for the task list"
         '';
       };
     });
