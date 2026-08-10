@@ -7,7 +7,7 @@
 #   stable -> scratch, for nodes that just need to run
 #   dev    -> alpine, same binary plus a shell for debugging
 
-ARG ALPINE_VERSION=3.22
+ARG ALPINE_VERSION=3.24
 ARG FREENET_VERSION=0.2.123
 
 FROM alpine:${ALPINE_VERSION} AS fetch

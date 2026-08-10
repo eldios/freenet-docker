@@ -68,6 +68,10 @@ clean data="./.run/data":
 shell:
     docker run --rm -it --entrypoint sh {{image}}:dev
 
+# Compare every pinned version in the repo against its upstream release
+check-versions:
+    ./test/check-versions.sh
+
 # Compare the pinned version against the newest upstream release
 check-release:
     #!/usr/bin/env bash
