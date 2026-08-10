@@ -32,8 +32,15 @@ build-stable:
 build-dev:
     docker build --target dev -t {{image}}:dev -f {{dockerfile}} .
 
-# Dry-run the GitHub workflow locally
+# Run the CI jobs for real in the runner image. A dry run only checks that the
+# workflow parses, which is not the same as the gates passing: the runner's
+# tool versions differ from the dev shell's.
 workflow-check:
+    act -j lint --pull=false
+    act -j smoke --pull=false
+
+# Parse-only check of the workflow, much faster than workflow-check
+workflow-parse:
     act -n
 
 # Start a throwaway node (the port must be explicit, see Dockerfile notes)

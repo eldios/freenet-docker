@@ -12,14 +12,11 @@ FAILED=0
 pass() { printf '  ok    %s\n' "$1"; }
 fail() { printf '  FAIL  %s\n' "$1"; FAILED=1; }
 
-# Invoked by the trap below, which shellcheck cannot see.
-# shellcheck disable=SC2329
-cleanup() {
-    docker rm -f "$NAME" >/dev/null 2>&1 || true
-    rm -rf "$TMPDATA"
-}
-TMPDATA="$(mktemp -d)"
-trap cleanup EXIT
+# A named volume rather than a bind mount: the daemon owns it, so this works
+# the same whether the tests run on a developer's machine or in a container
+# that talks to an outside daemon.
+VOLUME="freenet-smoke-vol-$$"
+trap 'docker rm -f "$NAME" >/dev/null 2>&1 || true; docker volume rm -f "$VOLUME" >/dev/null 2>&1 || true' EXIT
 
 expected_version="$(grep -oE '^ARG FREENET_VERSION=.*' "$DOCKERFILE" | head -1 | cut -d= -f2)"
 [ -n "$expected_version" ] || { echo "cannot read FREENET_VERSION from $DOCKERFILE" >&2; exit 1; }
@@ -60,10 +57,9 @@ for target in stable dev; do
     # The node writes state into /tmp at startup and panics if it cannot, which
     # a scratch image with no writable /tmp will do. Building is not enough:
     # it has to still be running a moment later.
-    rm -rf "${TMPDATA:?}/data"
-    mkdir -p "$TMPDATA/data"
     docker rm -f "$NAME" >/dev/null 2>&1 || true
-    docker run -d --name "$NAME" -v "$TMPDATA/data:/data" "$tag" \
+    docker volume rm -f "$VOLUME" >/dev/null 2>&1 || true
+    docker run -d --name "$NAME" -v "${VOLUME}:/data" "$tag" \
         network --disable-auto-update --network-port 31337 >/dev/null 2>&1
 
     sleep 20
