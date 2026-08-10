@@ -122,12 +122,23 @@ including carrier-grade NAT, join through NAT traversal.
 `nix develop` provides the toolchain, and `just` lists the tasks:
 
 ```
-just ci             lint and build, the same gates CI runs
+just ci             lint, build and smoke test, the same gates CI runs
+just test           smoke test the built images
 just run            start a throwaway node
 just logs           follow its log
 just peers          how many peers it has reached
 just check-release  compare the pinned version against upstream
 ```
+
+The smoke tests check what building cannot: that each image starts and is
+still running twenty seconds later, reports the pinned version, runs as a
+normal user, and does not expose the client API.
+
+## Keeping up with upstream
+
+A scheduled workflow compares the pinned version against the newest
+`freenet-core` release each morning and opens a pull request when they differ.
+Merging it changes the pin; publishing still requires tagging `v<version>`.
 
 ## Licence
 

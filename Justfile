@@ -10,7 +10,11 @@ default:
     @just --list
 
 # Every gate the CI workflow runs, in the same order
-ci: lint build
+ci: lint build test
+
+# Smoke test both images: they must start and stay up, not just build
+test:
+    ./test/smoke.sh
 
 # Lint the container definition and the workflows
 lint:

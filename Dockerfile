@@ -46,6 +46,11 @@ RUN set -eu; \
 	rm -f "${tarball}" SHA256SUMS.txt; \
 	chmod 0755 freenet
 
+# The node creates /tmp/freenet at startup and panics if it cannot. A scratch
+# image has no /tmp at all, so one is staged here to be copied in and given to
+# the runtime user.
+RUN mkdir /staged-tmp
+
 # The node stores its transport keypair and contract state under the data
 # directory, so it must be a volume: losing it means losing the node identity.
 FROM alpine:${ALPINE_VERSION} AS dev
@@ -76,6 +81,7 @@ FROM scratch AS stable
 # error that looks like a network problem.
 COPY --from=dev /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=dev /etc/passwd /etc/passwd
+COPY --from=fetch --chown=1000:1000 /staged-tmp /tmp
 COPY --from=fetch /out/freenet /usr/local/bin/freenet
 
 USER 1000:1000

@@ -1,0 +1,66 @@
+name: upstream
+
+# Opens a pull request when freenet-core publishes a release newer than the
+# pinned one. A pull request rather than a tag: upstream releases every few
+# days and not every one deserves to be shipped unread.
+#
+# The upstream tag is third-party input. It is passed through env, never
+# interpolated into a shell, and rejected unless it is a plain X.Y.Z before
+# anything is done with it.
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compare versions
+        id: versions
+        run: |
+          pinned="$(grep -oE '^ARG FREENET_VERSION=.*' Dockerfile | head -1 | cut -d= -f2)"
+          latest="$(curl -fsSL https://api.github.com/repos/freenet/freenet-core/releases/latest | jq -r .tag_name)"
+          latest="${latest#v}"
+          if ! printf '%s' "$latest" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "upstream tag is not a plain version: ${latest}" >&2
+            exit 1
+          fi
+          echo "pinned=${pinned}" >> "$GITHUB_OUTPUT"
+          echo "latest=${latest}" >> "$GITHUB_OUTPUT"
+          echo "pinned ${pinned}, latest ${latest}"
+
+      - name: Open a pull request
+        if: steps.versions.outputs.pinned != steps.versions.outputs.latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PINNED: ${{ steps.versions.outputs.pinned }}
+          LATEST: ${{ steps.versions.outputs.latest }}
+        run: |
+          branch="upstream/${LATEST}"
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+            echo "branch ${branch} already exists, nothing to do"
+            exit 0
+          fi
+
+          sed -i "s|^ARG FREENET_VERSION=.*|ARG FREENET_VERSION=${LATEST}|" Dockerfile
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add Dockerfile
+          git commit -m "chore: package Freenet ${LATEST}"
+          git push origin "$branch"
+
+          gh pr create \
+            --title "Package Freenet ${LATEST}" \
+            --body "Upstream released ${LATEST}; this repository packages ${PINNED}. Merging does not publish: tag v${LATEST} to release." \
+            --base main \
+            --head "$branch"
