@@ -45,6 +45,17 @@ over that checksum file. The corresponding public key does not appear to be
 published, so the signature is not verified here. Until it is, the checksum is
 only as trustworthy as the release it was downloaded from.
 
+## Where the images are published
+
+`ghcr.io/eldios/freenet` is the registry this repository publishes to, and the
+one the examples use. It sits beside the source, so an image and the build that
+produced it are in the same place.
+
+`docker.io/eldios/freenet` is a mirror, copied from the image above rather than
+built separately. If mirroring fails the release still stands.
+
+Both carry a `-dev` suffix for the alpine variant.
+
 ## Build
 
 ```
