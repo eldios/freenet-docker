@@ -21,7 +21,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: hadolint
         uses: hadolint/hadolint-action@v3.1.0
@@ -38,14 +38,14 @@ jobs:
     runs-on: ubuntu-latest
     needs: lint
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Single architecture and loaded locally: this job answers "does it
       # start", which is cheap, and leaves publishing to the build job.
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
 
       - name: Build stable
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: Dockerfile
@@ -54,7 +54,7 @@ jobs:
           tags: freenet-local:stable
 
       - name: Build dev
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: Dockerfile
@@ -75,17 +75,17 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-qemu-action@v4
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
 
       # Builds run on every push so a broken Dockerfile is caught before a
       # tag is cut; only tags are published.
       - name: Log in to GHCR
         if: startsWith(github.ref, 'refs/tags/')
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -93,7 +93,7 @@ jobs:
 
       - name: Tags
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
           flavor: |
@@ -104,7 +104,7 @@ jobs:
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/') }}
 
       - name: Build and push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: Dockerfile
@@ -120,7 +120,7 @@ jobs:
       - name: Docker Hub tags
         id: hub
         if: startsWith(github.ref, 'refs/tags/') && vars.DOCKERHUB_USERNAME != ''
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: docker.io/${{ vars.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}
           flavor: |
@@ -133,7 +133,7 @@ jobs:
       - name: Log in to Docker Hub
         if: startsWith(github.ref, 'refs/tags/') && vars.DOCKERHUB_USERNAME != ''
         continue-on-error: true
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
