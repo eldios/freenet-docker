@@ -17,10 +17,6 @@ env:
 permissions:
   contents: read
 
-# A package published to GHCR for the first time is private even when the
-# repository is public. Its visibility has to be set once, in the package
-# settings, or nobody else can pull it.
-
 jobs:
   lint:
     runs-on: ubuntu-latest

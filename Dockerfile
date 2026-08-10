@@ -19,11 +19,9 @@ ARG TARGETARCH
 # grep would be masked by sha256sum's exit status.
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
-# Package versions are not pinned on purpose. Alpine drops superseded versions
-# from its repositories, so a pinned apk version stops resolving and the build
-# fails outright rather than drifting. ALPINE_VERSION narrows the range these
-# come from; it does not freeze them. Nothing from this stage reaches the
-# stable image, and the binary that does is checksum-verified below.
+# Alpine drops superseded package versions, so pinning them here would make the
+# build fail outright rather than drift. Nothing from this stage reaches the
+# stable image.
 # hadolint ignore=DL3018
 RUN apk add --no-cache curl tar
 
