@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="freenet-docker" width="200">
+</p>
+
 # freenet-docker
 
 Container images for [Freenet](https://freenet.org), built from the official
