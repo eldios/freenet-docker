@@ -79,6 +79,27 @@ a node will take what it can get.
 **`/data` holds the node identity.** The transport keypair lives there. Back it
 up, and understand that losing it means becoming a different node.
 
+**Pass `--network-port` explicitly.** The help text documents a default of
+31337, but a node started without the flag binds an ephemeral UDP port
+instead, so a published port forwards nothing. Observed on 0.2.123.
+
+**Logs go to files, not stdout.** The node writes to
+`/data/.local/state/freenet/freenet.<date>.log` and a matching
+`.error.<date>.log`, which means `docker logs` stays empty and a log collector
+pointed at the container output sees nothing. Read them from the volume until
+this is handled better.
+
+## Does it work behind CGNAT
+
+Yes. Tested on a Starlink line, which is CGNAT, with no port forwarding
+possible: the node logged `NAT traversal connection established` and reached
+39 peers within five minutes.
+
+This is worth stating because it is not true of every network of this kind. On
+I2P the same line can never carry transit traffic, because that role needs
+inbound connections. Freenet only needs a reachable address for the gateway
+role, which is optional.
+
 ## Gateways
 
 A gateway needs `--public-network-address` and `--public-network-port`, so it
