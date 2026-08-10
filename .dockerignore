@@ -1,0 +1,5 @@
+# The build fetches everything it needs over the network, so the context only
+# needs to carry the Dockerfile itself. Keeping it near-empty also keeps local
+# state and history out of the build.
+*
+!Dockerfile

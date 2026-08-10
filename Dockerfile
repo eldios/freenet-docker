@@ -19,18 +19,20 @@ ARG TARGETARCH
 # grep would be masked by sha256sum's exit status.
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
-# Package versions are not pinned on purpose: the Alpine release is already
-# pinned by ALPINE_VERSION, which fixes them, and hard-coding them here would
-# break the build on every Alpine point release.
+# Package versions are not pinned on purpose. Alpine drops superseded versions
+# from its repositories, so a pinned apk version stops resolving and the build
+# fails outright rather than drifting. ALPINE_VERSION narrows the range these
+# come from; it does not freeze them. Nothing from this stage reaches the
+# stable image, and the binary that does is checksum-verified below.
 # hadolint ignore=DL3018
 RUN apk add --no-cache curl tar
 
 WORKDIR /out
 
 # The checksums come from the release itself and are verified before the
-# archive is opened. Upstream also publishes SHA256SUMS.txt.sig, a raw 64-byte
-# Ed25519 signature, but the matching public key is not published anywhere we
-# could find, so it cannot be verified here. See README.
+# archive is opened. Upstream also publishes a raw Ed25519 signature over that
+# checksum file; it is not verified here because no corresponding public key is
+# published. See README.
 RUN set -eu; \
 	case "${TARGETARCH}" in \
 		amd64) arch=x86_64 ;; \

@@ -1,5 +1,7 @@
 services:
   freenet:
+    # Published images live on GHCR. To run a locally built one instead, use
+    # the tag produced by `just build`, for example freenet-local:stable.
     image: ghcr.io/eldios/freenet:latest
     container_name: freenet
     restart: unless-stopped

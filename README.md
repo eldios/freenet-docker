@@ -1,7 +1,7 @@
 # freenet-docker
 
 Container images for [Freenet](https://freenet.org), built from the official
-release binaries with a build you can read.
+release binaries with a build you can read in one file.
 
 ## Which Freenet
 
@@ -11,101 +11,109 @@ opened from an ordinary browser.
 
 It is **not** the original Freenet from 2000, which was renamed
 [Hyphanet](https://www.hyphanet.org/). The two share a name and nothing else.
-Most images on Docker Hub tagged `freenet` are the old Java one, so check
-before pulling.
+Many images published under the name `freenet` are the older Java project, so
+check which one you are pulling.
 
-## Why another image
+## Goals
 
-`queeup/freenet-container` tracks upstream releases closely and works. Its
-Docker Hub page points at `queeup-containers/freenet-container` as the source,
-but that repository is not public, so how the image is assembled cannot be
-audited.
-
-For a program that holds your node identity and your keys, that seemed worth
-fixing rather than tolerating. Everything here is in one file you can read.
+- One `Dockerfile`, short enough to read end to end before trusting it.
+- The binary is verified against the checksums published with the release.
+- Nothing in the runtime image that the node does not need.
+- Defaults that do not surprise you: no exposed control API, no unbounded
+  resource use.
 
 ## Images
 
 | Target | Base | For |
 |---|---|---|
-| `stable` | `scratch` | Running a node. Nothing in the image but the binary, certificates and a passwd entry |
-| `dev` | `alpine` | The same binary with a shell, for when something needs looking at from inside |
+| `stable` | `scratch` | Running a node. The binary, certificates and a passwd entry, nothing else |
+| `dev` | `alpine` | The same binary with a shell, for looking at things from inside |
 
 The Linux release binaries are `static-pie`, so `scratch` needs no libc.
 
-## How the binary is verified
+## Verification
 
-The build downloads the release tarball and `SHA256SUMS.txt` from the same
-release, and checks the archive against it before opening it.
+The build downloads the release archive and the `SHA256SUMS.txt` published in
+the same release, and checks the archive against it before extracting.
 
-Upstream also publishes `SHA256SUMS.txt.sig`, a raw 64-byte Ed25519 signature.
-We could not find the matching public key published anywhere, so that signature
-cannot currently be verified. Until it is, the checksum is only as trustworthy
-as the release page it came from. See the issue linked below.
+Upstream also publishes `SHA256SUMS.txt.sig`, a raw 64-byte Ed25519 signature
+over that checksum file. The corresponding public key does not appear to be
+published, so the signature is not verified here. Until it is, the checksum is
+only as trustworthy as the release it was downloaded from.
 
 ## Build
+
+```
+just build
+```
+
+Or directly:
 
 ```
 docker build --target stable -t freenet:stable .
 docker build --target dev -t freenet:dev .
 ```
 
-Pin a different version with `--build-arg FREENET_VERSION=0.2.123`.
+Select a version with `--build-arg FREENET_VERSION=0.2.123`.
 
 ## Run
 
 ```
-docker run -d --name freenet -v freenet-data:/data -p 31337:31337/udp freenet:stable
+docker run -d --name freenet \
+    -v freenet-data:/data \
+    -p 31337:31337/udp -p 31337:31337/tcp \
+    freenet:stable network \
+    --disable-auto-update \
+    --network-port 31337
 ```
 
-### Things worth knowing before running one
+See `compose.example.yaml` for a fuller example including resource limits.
 
-**Do not publish port 7509.** That is the client API. Upstream's own
-documentation says anything that can reach it can read and modify contract
-state, identities and keys. It binds to loopback by default and should stay
-there; this image does not expose it.
+## Operating notes
 
-**The node asks to be updated by exiting.** When it sees a new release it exits
-with code 42 and expects a supervisor to run `freenet update` before
-restarting. A container with a restart policy will instead come back on the
-same version, see the new release again, and exit again. Either pass
-`--disable-auto-update` and upgrade by changing the image tag, or supervise it
-yourself.
+**Set `--network-port` explicitly.** A node started without it binds an
+ephemeral UDP port rather than the documented default, and a published port
+then forwards nothing.
 
-**Bound what it contributes.** `--bandwidth-limit`, `--total-bandwidth-limit`,
-`--max-hosting-disk` and `--hosting-disk-pct` exist for a reason: without them
-a node will take what it can get.
+**Do not publish port 7509.** That is the client API. Upstream documents that
+anything able to reach it can read and modify contract state, identities and
+keys. It binds to loopback by default; these images do not expose it.
 
-**`/data` holds the node identity.** The transport keypair lives there. Back it
-up, and understand that losing it means becoming a different node.
+**Auto-update needs a supervisor.** When the node sees a new release it exits
+with code 42 and expects something to run `freenet update` before restarting. A
+container with a restart policy will instead return on the same version and do
+it again. Either pass `--disable-auto-update` and upgrade by changing the image
+tag, or supervise it yourself.
 
-**Pass `--network-port` explicitly.** The help text documents a default of
-31337, but a node started without the flag binds an ephemeral UDP port
-instead, so a published port forwards nothing. Observed on 0.2.123.
+**Bound what the node contributes.** `--bandwidth-limit`,
+`--total-bandwidth-limit`, `--max-hosting-disk` and `--hosting-disk-pct` exist
+because a node will otherwise use what it finds.
 
-**Logs go to files, not stdout.** The node writes to
-`/data/.local/state/freenet/freenet.<date>.log` and a matching
-`.error.<date>.log`, which means `docker logs` stays empty and a log collector
-pointed at the container output sees nothing. Read them from the volume until
-this is handled better.
+**Logs are written to files.** The node writes to
+`/data/.local/state/freenet/`, not to stdout, so `docker logs` shows nothing.
+Read them from the volume.
 
-## Does it work behind CGNAT
+**`/data` holds the node identity.** The transport keypair lives there; losing
+it means becoming a different node. Back it up.
 
-Yes. Tested on a Starlink line, which is CGNAT, with no port forwarding
-possible: the node logged `NAT traversal connection established` and reached
-39 peers within five minutes.
-
-This is worth stating because it is not true of every network of this kind. On
-I2P the same line can never carry transit traffic, because that role needs
-inbound connections. Freenet only needs a reachable address for the gateway
-role, which is optional.
-
-## Gateways
+## Peers and gateways
 
 A gateway needs `--public-network-address` and `--public-network-port`, so it
-needs a reachable address. An ordinary peer does not, which is why a node
-behind CGNAT can still take part.
+needs an address others can reach. An ordinary peer does not: nodes behind NAT,
+including carrier-grade NAT, join through NAT traversal.
+
+## Development
+
+`nix develop` provides the toolchain, and `just` lists the tasks:
+
+```
+just ci             lint and build, the same gates CI runs
+just run            start a throwaway node
+just logs           follow its log
+just peers          how many peers it has reached
+just check-release  compare the pinned version against upstream
+```
 
 ## Licence
 
-The packaging here is MIT. Freenet itself is licensed by its own authors.
+MIT, see [LICENSE](LICENSE). Freenet itself is licensed by its own authors.
