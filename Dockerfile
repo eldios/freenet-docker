@@ -8,7 +8,7 @@
 #   dev    -> alpine, same binary plus a shell for debugging
 
 ARG ALPINE_VERSION=3.24
-ARG FREENET_VERSION=0.2.123
+ARG FREENET_VERSION=0.2.127
 
 FROM alpine:${ALPINE_VERSION} AS fetch
 
